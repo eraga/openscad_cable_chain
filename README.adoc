@@ -1,7 +1,7 @@
 = 3d printed cable chain
 :openscad_lib_name: cable_chain
 
-This library contains generator of a 3d printable easy to assemble cable chain.
+This library contains generator of a 3d printable easy to assemble cable chain with optional segments with a hook (useful to attach external flexible hose/tube).
 
 image::docs/render.png[width=400]
 
@@ -23,7 +23,7 @@ git submodule add https://github.com/eraga/{openscad_lib_name} lib/{openscad_lib
 include <../lib/{openscad_lib_name}/{openscad_lib_name}s.scad>
 
 translate([-50,0,8])
-cable_chain(SAMPLE_CABLE_CHAIN);
+cable_chain(SAMPLE_CABLE_CHAIN, [0,0,30,30,30,30,30,30,0]);
 translate([50,0,5])
 cable_chain(SAMPLE_CABLE_CHAIN_WITH_HOOKS);
 ----

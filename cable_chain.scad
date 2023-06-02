@@ -4,7 +4,7 @@ function cable_chain_segment_length(type) = type[0];
 function cable_chain_segment_width(type) = type[1];
 function cable_chain_segment_heigth(type) = type[2];
 function cable_chain_hook_spacing(type) = type[3];
-function cable_chain_segment_angles(type) = type[4];
+function cable_chain_segment_angles(type) = is_undef(type[4]) ? [0] : type[4];
 
 
 function str_replace(string, search_chr, replace_chr) = chr([
@@ -176,12 +176,16 @@ module cable_chain_section_body(
 
 }
 
-module cable_chain(type) {
+/**
+* type — chain type
+* segments — array of segment angles, each item represents a segment
+*/
+module cable_chain(type, segments = []) {
     l = cable_chain_segment_length(type);
     w = cable_chain_segment_width(type);
     h = cable_chain_segment_heigth(type);
     hs = cable_chain_hook_spacing(type);
-    angles = cable_chain_segment_angles(type);
+    angles = len(segments) > 0 ? segments : cable_chain_segment_angles(type);
     total_segments = len(angles);
 
     module rotated_section(angles, segment = 0) {
