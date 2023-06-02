@@ -4,7 +4,8 @@ function cable_chain_segment_length(type) = type[0];
 function cable_chain_segment_width(type) = type[1];
 function cable_chain_segment_heigth(type) = type[2];
 function cable_chain_hook_spacing(type) = type[3];
-function cable_chain_segment_angles(type) = is_undef(type[4]) ? [0] : type[4];
+function cable_chain_max_angle(type) = type[4];
+function cable_chain_default_segments(type) = is_undef(type[5]) ? [0] : type[5];
 
 
 function str_replace(string, search_chr, replace_chr) = chr([
@@ -176,16 +177,30 @@ module cable_chain_section_body(
 
 }
 
+function greatest_of(a, b) = a >= b ? a : b;
+
+
+function cable_chain_generate_angles(type, l, a) = concat([
+        for(i = [0 : l / cable_chain_segment_length(type)])
+            0
+    ], [for(j = [1 : a / cable_chain_max_angle(type)]) cable_chain_max_angle(type)]);
+
 /**
 * type — chain type
 * segments — array of segment angles, each item represents a segment
 */
-module cable_chain(type, segments = []) {
+module cable_chain(type, segments = [], length = undef, turn_angle = undef) {
+    if(!is_undef(length) || !is_undef(turn_angle)) {
+        assert(!is_undef(length), "length should be set");
+        assert(!is_undef(turn_angle), "turn_angle should be set");
+    }
+
     l = cable_chain_segment_length(type);
     w = cable_chain_segment_width(type);
     h = cable_chain_segment_heigth(type);
     hs = cable_chain_hook_spacing(type);
-    angles = len(segments) > 0 ? segments : cable_chain_segment_angles(type);
+    _segments = is_undef(length) ? segments : cable_chain_generate_angles(type, length, turn_angle);
+    angles = len(_segments) > 0 ? _segments : cable_chain_default_segments(type);
     total_segments = len(angles);
 
     module rotated_section(angles, segment = 0) {
