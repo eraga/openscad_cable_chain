@@ -13,7 +13,7 @@ Clone git repository as submodule to your OpenSCAD project. Assuming that extern
 
 [source,bash,subs=attributes+]
 ----
-git submodule add https://github.com/eraga/{openscad_lib_name} lib/{openscad_lib_name}
+git submodule add https://github.com/eraga/openscad_{openscad_lib_name} lib/{openscad_lib_name}
 ----
 
 == Example usage
