@@ -1,68 +1,87 @@
 include <NopSCADlib/utils/core/core.scad>
-
-function cable_chain_segment_length(type) = type[0];
-function cable_chain_segment_width(type) = type[1];
-function cable_chain_segment_heigth(type) = type[2];
-function cable_chain_hook_spacing(type) = type[3];
-function cable_chain_max_angle(type) = type[4];
-function cable_chain_default_segments(type) = is_undef(type[5]) ? [0] : type[5];
+use <NopSCADlib/utils/horiholes.scad>
+function cable_chain_name(type) = type[0];
+function cable_chain_segment_length(type) = type[1];
+function cable_chain_segment_width(type) = type[2];
+function cable_chain_segment_heigth(type) = type[3];
+function cable_chain_hook_spacing(type) = type[4];
+function cable_chain_max_angle(type) = type[5];
+function cable_chain_default_segments(type) = is_undef(type[6]) ? [0] : type[6];
+function cable_chain_3dprinted_layer_heigth(type) = is_undef(type[7]) ? .2 : type[7] == 0 ? .2 : type[7];
 
 
 function str_replace(string, search_chr, replace_chr) = chr([
-    for(c = str(string))
+    for (c = str(string))
         c == search_chr ? ord(replace_chr) : ord(c)
     ]);
 
 /**
 * STL helper
 */
-module cable_chain_section_body_and_cap(l, w, h, coil) {
+module cable_chain_section_body_and_cap(type, coil = false) {
+    l = cable_chain_segment_length(type);
+    w = cable_chain_segment_width(type);
+    h = cable_chain_segment_heigth(type);
     $fn = 90;
-    translate([0,0,h/2]) {
-            translate([0, - l, -h+1.5])
+    translate([0, 0, h / 2]) {
+        translate([0, - l, - h + 1.5])
             rotate([0, 0, 0])
-                cable_chain_section_cap(l, w, h);
+                cable_chain_section_cap(type);
 
-        cable_chain_section_body(l, w, h, coil = coil);
+        cable_chain_section_body(type, coil = coil);
     }
 }
 
-module cable_chain_section(l, w, h, color = "yellow", coil = true) {
+module cable_chain_section(type, color = "yellow", hook = true) {
 
-    has_coil = coil ? "with_hook_" : "";
+    with_hook = hook ? "_with_hook" : "";
 
-    name = str("ABS_cable_chain_section_body_and_cap_", has_coil,
-    "L", str_replace(l,".","_"), "xW", str_replace(w,".","_"), "xH", str_replace(h,".","_")
-    );
+    name = str(cable_chain_name(type), with_hook);
     stl(name);
 
     color("blue")
-    render()
-    cable_chain_section_cap(l, w, h);
+        render()
+            cable_chain_section_cap(type);
 
     color(color)
-    render()
-    cable_chain_section_body(l, w, h, coil = coil);
+        render()
+            cable_chain_section_body(type, coil = coil);
 }
 
-module cable_chain_section_cap(l, w, h, expansion = 0) {
-    translate([0,l/12,h/2-1/2-.25]) {
-            cube([w-7, l / 3, 1.5+expansion], center = true);
-            cube([w-3+expansion*10, l / 3 / 2, 1.5+expansion], center = true);
+module cable_chain_section_cap(type, expansion = 0) {
+    l = cable_chain_segment_length(type);
+    w = cable_chain_segment_width(type);
+    h = cable_chain_segment_heigth(type);
+    translate([0, l / 12, h / 2 - 1 / 2 - .25]) {
+        cube([w - 6, l / 3, 1.5 + expansion], center = true);
+        cube([w - 3 + expansion * 10, l / 3 / 2, 1.5 + expansion], center = true);
     }
 }
 
 module cable_chain_section_body_base(
-    l, w, h, start = true, end = true) {
+    type,
+    start = true,
+    end = true,
+) {
+    l = cable_chain_segment_length(type);
+    w = cable_chain_segment_width(type);
+    h = cable_chain_segment_heigth(type);
+    z = cable_chain_3dprinted_layer_heigth(type);
+
     module ear_mount() {
-        translate_z(h/2)
-        cube([3.2, h/2, h/2], center = true);
-        translate_z(-h/2)
-        cube([3.2, h/2, h/2], center = true);
+        translate_z(h / 2)
+        cube([3.2, h / 2, h / 2], center = true);
+        translate_z(- h / 2)
+        cube([3.2, h / 2, h / 2], center = true);
         rotate([0, 90, 0])
             difference() {
-                cylinder(d = h+.2, h = 3.2, center = true);
-                cylinder(d = 3, h = 4, center = true);
+                union() {
+                    cylinder(d = h, h = 3.2, center = true);
+                    rotate([0, 0, 90])
+                        horicylinder(r = (h + .25) / 2, z = .2, h = 3.2, center = true);
+                }
+                rotate([0,0,90])
+                horicylinder(r = 3/2, z = .2, h = 4, center = true);
             }
     }
 
@@ -70,19 +89,19 @@ module cable_chain_section_body_base(
         union() {
             hull() {
                 cube([w, l, h], center = true);
-                if(end) {
+                if (end) {
                     translate([0, l / 2, 0])
                         rotate([0, 90, 0])
                             cylinder(d = h, h = w, center = true);
                 }
-                if(start) {
+                if (start) {
                     translate([0, - l / 2 + h / 4, 0])
                         rotate([0, 90, 0])
                             cylinder(d = h, h = w, center = true);
                 }
             }
 
-            if(start) {
+            if (start) {
                 translate([0, - l / 2, 0])
                     rotate([0, 90, 0])
                         cylinder(d = 3, h = w + 1, center = true);
@@ -90,34 +109,38 @@ module cable_chain_section_body_base(
 
         }
 
-        if(end) {
+        if (end) {
             translate([0, l / 2, 0])
-                rotate([0, 90, 0])
-                    cylinder(d = 3.5, h = w * 2, center = true);
+                rotate([90, 0, 90])
+                    horihole(r = 3.5/2, z = 0.2, h = w * 2);
 
             translate([0, l * 0.8, 0])
-                cube([w - 3.1, l, h*2], center = true);
+                cube([w - 3.1, l, h * 2], center = true);
         }
 
-        if(start) {
+        if (start) {
             translate([- w / 2, - l / 2, 0])
                 ear_mount();
             translate([w / 2, - l / 2, 0])
                 ear_mount();
 
             translate([0, 0, 2])
-                cube([w - 6, l*2, h], center = true);
+                cube([w - 6, l * 2, h], center = true);
 
         }
     }
 }
 
 module cable_chain_section_body(
-    l, w, h,
-    d_cooler = 24.5,
-    d_filament_feeder = 4.5,
-    coil = true
+type,
+d_cooler = 24.5,
+d_filament_feeder = 4.5,
+coil = true
 ) {
+    l = cable_chain_segment_length(type);
+    w = cable_chain_segment_width(type);
+    h = cable_chain_segment_heigth(type);
+
     coil_th = 8;
     coil_h = 4;
 
@@ -132,12 +155,12 @@ module cable_chain_section_body(
                     }
                     cylinder(d = d, h = coil_h * 2, center = true);
                 }
-//                if(cooler) {
-//                    difference() {
-//                        cylinder(d = d + 1, h = 1, center = true);
-//                        cylinder(d = d - 1.5, h = 2, center = true);
-//                    }
-//                }
+                //                if(cooler) {
+                //                    difference() {
+                //                        cylinder(d = d + 1, h = 1, center = true);
+                //                        cylinder(d = d - 1.5, h = 2, center = true);
+                //                    }
+                //                }
             }
             translate([- d / 4, - d / 6, - d / 2])
                 cube([d * 2, d * 2, d * 2]);
@@ -147,32 +170,32 @@ module cable_chain_section_body(
 
     difference() {
         union() {
-            cable_chain_section_body_base(l = l, w = w, h = h);
-            if(coil) {
+            cable_chain_section_body_base(type);
+            if (coil) {
                 if (d_cooler > 0) {
                     translate([(d_cooler / 2 + w / 2), 0, d_cooler / 2 + coil_th / 2 - h / 2])
                         rotate([90, 0, 180])
                             attach_coil(d = d_cooler, cooler = true);
                 }
 
-//                if (d_filament_feeder > 0) {
-//                    translate([(d_cooler / 2 + w / 2), 0, 0]) {
-//                        translate([(d_filament_feeder / 2 + d_cooler / 2) + coil_th / 2, 0, d_filament_feeder / 2 +
-//                                coil_th
-//                                / 2 - h / 2]) {
-//                            rotate([90, 0, 180])
-//                                attach_coil(d = d_filament_feeder);
-//                        }
-//                        translate([coil_th / 2, 0, - h / 2 + coil_th / 4])
-//                            cube([d_cooler, coil_h, coil_th / 2], center = true);
-//                    }
-//                }
+                //                if (d_filament_feeder > 0) {
+                //                    translate([(d_cooler / 2 + w / 2), 0, 0]) {
+                //                        translate([(d_filament_feeder / 2 + d_cooler / 2) + coil_th / 2, 0, d_filament_feeder / 2 +
+                //                                coil_th
+                //                                / 2 - h / 2]) {
+                //                            rotate([90, 0, 180])
+                //                                attach_coil(d = d_filament_feeder);
+                //                        }
+                //                        translate([coil_th / 2, 0, - h / 2 + coil_th / 4])
+                //                            cube([d_cooler, coil_h, coil_th / 2], center = true);
+                //                    }
+                //                }
             }
         }
 
 
-        translate_z(-1.5)
-        cable_chain_section_cap(l, w, h, expansion = 1);
+        translate_z(- 1.5)
+        cable_chain_section_cap(type, expansion = 1);
     }
 
 }
@@ -181,16 +204,16 @@ function greatest_of(a, b) = a >= b ? a : b;
 
 
 function cable_chain_generate_angles(type, l, a) = concat([
-        for(i = [0 : l / cable_chain_segment_length(type)])
-            0
-    ], [for(j = [1 : a / cable_chain_max_angle(type)]) cable_chain_max_angle(type)]);
+    for (i = [0 : l / cable_chain_segment_length(type)])
+    0
+    ], [for (j = [1 : a / cable_chain_max_angle(type)]) cable_chain_max_angle(type)]);
 
 /**
 * type — chain type
 * segments — array of segment angles, each item represents a segment
 */
 module cable_chain(type, segments = [], length = undef, turn_angle = undef) {
-    if(!is_undef(length) || !is_undef(turn_angle)) {
+    if (!is_undef(length) || !is_undef(turn_angle)) {
         assert(!is_undef(length), "length should be set");
         assert(!is_undef(turn_angle), "turn_angle should be set");
     }
@@ -207,16 +230,16 @@ module cable_chain(type, segments = [], length = undef, turn_angle = undef) {
         angle = angles[0];
         set_color = hs != 0 && segment % hs == 0 ? "green" : "white";
 
-        rotate([angle,0,0])
-            translate([0, l/2,0])
-                cable_chain_section(l = l, w = w, h = h, color = set_color, coil = segment % hs == 0);
+        rotate([angle, 0, 0])
+            translate([0, l / 2, 0])
+                cable_chain_section(type, color = set_color, coil = segment % hs == 0);
 
-        if(len(angles) > 1) {
+        if (len(angles) > 1) {
             remaining_angles = [for (a = [1 : len(angles) - 1]) angles[a]];
-            rotate([angle,0,0])
-                translate([0,l,0])
+            rotate([angle, 0, 0])
+                translate([0, l, 0])
                     rotated_section(remaining_angles, segment = segment + 1)
-                        children();
+                    children();
 
         } else {
             children();
@@ -225,6 +248,6 @@ module cable_chain(type, segments = [], length = undef, turn_angle = undef) {
 
 
     rotated_section(angles, segment = 1)
-        children();
+    children();
 }
 
