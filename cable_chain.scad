@@ -1,5 +1,8 @@
 include <NopSCADlib/utils/core/core.scad>
 use <NopSCADlib/utils/horiholes.scad>
+include <NopSCADlib/utils/core/rounded_rectangle.scad>
+
+
 function cable_chain_name(type) = type[0];
 function cable_chain_segment_length(type) = type[1];
 function cable_chain_segment_width(type) = type[2];
@@ -8,6 +11,7 @@ function cable_chain_hook_spacing(type) = type[4];
 function cable_chain_max_angle(type) = type[5];
 function cable_chain_default_segments(type) = is_undef(type[6]) ? [0] : type[6];
 function cable_chain_3dprinted_layer_heigth(type) = is_undef(type[7]) ? .2 : type[7] == 0 ? .2 : type[7];
+function cable_chain_one_way_flex(type) = is_undef(type[8]) ? false : type[8] == false ? false : true;
 
 
 function str_replace(string, search_chr, replace_chr) = chr([
@@ -67,21 +71,28 @@ module cable_chain_section_body_base(
     w = cable_chain_segment_width(type);
     h = cable_chain_segment_heigth(type);
     z = cable_chain_3dprinted_layer_heigth(type);
+    owf = cable_chain_one_way_flex(type);
 
     module ear_mount() {
         translate_z(h / 2)
         cube([3.2, h / 2, h / 2], center = true);
-        translate_z(- h / 2)
-        cube([3.2, h / 2, h / 2], center = true);
+        translate_z(- h / 2){
+            if (owf) {
+                translate([0, h * 3 / 8, 0])
+                    cube([3.2, h / 4, h], center = true);
+            }
+            cube([3.2, h / 2, h / 2], center = true);
+        }
+
         rotate([0, 90, 0])
             difference() {
                 union() {
                     cylinder(d = h, h = 3.2, center = true);
                     rotate([0, 0, 90])
-                        horicylinder(r = (h + .25) / 2, z = .2, h = 3.2, center = true);
+                        horicylinder(r = (h + .25) / 2, z = z, h = 3.2, center = true);
                 }
                 rotate([0,0,90])
-                horicylinder(r = 3/2, z = .2, h = 4, center = true);
+                horicylinder(r = 3/2, z = z, h = 4, center = true);
             }
     }
 
@@ -90,9 +101,16 @@ module cable_chain_section_body_base(
             hull() {
                 cube([w, l, h], center = true);
                 if (end) {
-                    translate([0, l / 2, 0])
+                    translate([0, l / 2, 0]) {
                         rotate([0, 90, 0])
                             cylinder(d = h, h = w, center = true);
+
+                        if (owf) {
+                            translate([0, 0, -h/4])
+                                rounded_cube_yz([w, h, h/2], r = 1, xy_center = true, z_center = true);
+//                                cube([w, h, h/2], center = true);
+                        }
+                    }
                 }
                 if (start) {
                     translate([0, - l / 2 + h / 4, 0])
@@ -112,7 +130,7 @@ module cable_chain_section_body_base(
         if (end) {
             translate([0, l / 2, 0])
                 rotate([90, 0, 90])
-                    horihole(r = 3.5/2, z = 0.2, h = w * 2);
+                    horihole(r = 3.5/2, z = z, h = w * 2);
 
             translate([0, l * 0.8, 0])
                 cube([w - 3.1, l, h * 2], center = true);
