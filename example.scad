@@ -18,7 +18,7 @@ include <cable_chains.scad>
 
 // Chain STL helper
 //                                    name,  l,   w,  h, hook,      smnts,  lh,    of
-XY_CABLE_CHAIN = ["ABS_y_axis_cable_chain", 20, 20, 12, 2, 33, [0,-10,20, -10, 0, 0], 0.3, true];
+XY_CABLE_CHAIN = ["ABS_y_axis_cable_chain", 20, 20, 12, 2, 33, [0,-10,20, -10, 0, 0], 0.2, true];
 cable_chain(XY_CABLE_CHAIN);
 
 //translate([250,0,5]) {
